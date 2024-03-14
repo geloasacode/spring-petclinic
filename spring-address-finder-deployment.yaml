@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f ../docker-compose.yml
+    kompose.version: 1.32.0 (765fde254)
+  labels:
+    io.kompose.service: spring-address-finder
+  name: spring-address-finder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: spring-address-finder
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f ../docker-compose.yml
+        kompose.version: 1.32.0 (765fde254)
+      labels:
+        io.kompose.network/spring-petclinic-spring-petclinic-net: "true"
+        io.kompose.service: spring-address-finder
+    spec:
+      containers:
+        - env:
+            - name: ELASTICSEARCH_PASSWORD
+              value: changeme
+            - name: ELASTICSEARCH_URL
+              value: http://elasticsearch:9200
+            - name: ELASTICSEARCH_USER
+              value: elastic
+            - name: ELASTIC_APM_CLIENT_SERVICE_NAME
+              value: petclinic-react
+            - name: ELASTIC_APM_SERVER_URL
+              value: http://apm-server:8200
+            - name: ELASTIC_APM_SERVICE_NAME
+              value: petclinic-address-finder
+            - name: ELASTIC_APM_SERVICE_VERSION
+              value: 1.0.0
+          image: spring-address-finder:7.4.0
+          name: spring-address-finder
+          ports:
+            - containerPort: 5000
+              hostIP: 127.0.0.1
+              hostPort: 5000
+              protocol: TCP
+      restartPolicy: Always

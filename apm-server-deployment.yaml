@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f ../docker-compose.yml
+    kompose.version: 1.32.0 (765fde254)
+  labels:
+    io.kompose.service: apm-server
+  name: apm-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: apm-server
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f ../docker-compose.yml
+        kompose.version: 1.32.0 (765fde254)
+      labels:
+        io.kompose.network/spring-petclinic-spring-petclinic-net: "true"
+        io.kompose.service: apm-server
+    spec:
+      containers:
+        - args:
+            - apm-server
+            - -e
+            - -E
+            - apm-server.frontend.enabled=true
+            - -E
+            - apm-server.frontend.rate_limit=100000
+            - -E
+            - apm-server.host=0.0.0.0:8200
+            - -E
+            - apm-server.read_timeout=1m
+            - -E
+            - apm-server.shutdown_timeout=2m
+            - -E
+            - apm-server.write_timeout=1m
+            - -E
+            - apm-server.rum.enabled=true
+            - -E
+            - apm-server.kibana.host=kibana:5601
+            - -E
+            - apm-server.kibana.protocol=http
+            - -E
+            - apm-server.kibana.username=elastic
+            - -E
+            - apm-server.kibana.password=changeme
+            - -E
+            - monitoring.enabled=true
+            - -E
+            - output.elasticsearch.hosts=elasticsearch:9200
+            - -E
+            - output.elasticsearch.username=elastic
+            - -E
+            - output.elasticsearch.password=changeme
+            - -E
+            - setup.template.enabled=true
+            - -E
+            - setup.template.overwrite=true
+            - -E
+            - apm-server.frontend.enable=true
+            - -E
+            - apm-server.frontend.rate_limit=10000
+            - -E
+            - apm-server.read_timeout=1m
+            - -E
+            - apm-server.shutdown_timeout=2m
+            - -E
+            - apm-server.write_timeout=1m
+            - -E
+            - logging.metrics.enabled=true
+            - -E
+            - logging.metrics.enabled=true
+            - -E
+            - ilm.enabled=true
+          image: docker.elastic.co/apm/apm-server:7.4.0
+          livenessProbe:
+            exec:
+              command:
+                - curl
+                - --write-out
+                - '''HTTP %{http_code}'''
+                - --silent
+                - --output
+                - /dev/null
+                - http://apm-server:8200/
+            failureThreshold: 10
+            periodSeconds: 10
+          name: spring-petclinic-apm-server
+          ports:
+            - containerPort: 8200
+              hostIP: 127.0.0.1
+              hostPort: 8200
+              protocol: TCP
+            - containerPort: 6060
+              hostIP: 127.0.0.1
+              hostPort: 6060
+              protocol: TCP
+          securityContext:
+            capabilities:
+              add:
+                - CHOWN
+                - DAC_OVERRIDE
+                - SETGID
+                - SETUID
+              drop:
+                - ALL
+      restartPolicy: Always

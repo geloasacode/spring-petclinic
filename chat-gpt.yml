@@ -1,0 +1,244 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-petclinic-elasticsearch
+spec:
+  selector:
+    app: elasticsearch
+  ports:
+    - protocol: TCP
+      port: 9200
+      targetPort: 9200
+      nodePort: 30000
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-petclinic-elasticsearch
+spec:
+  selector:
+    matchLabels:
+      app: elasticsearch
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+        - name: elasticsearch
+          image: docker.elastic.co/elasticsearch/elasticsearch:7.4.0
+          env:
+            - name: ES_JAVA_OPTS
+              value: "-Xms2048m -Xmx2048m"
+            - name: node.name
+              value: petclinic-elasticsearch
+            - name: discovery.type
+              value: single-node
+            - name: ELASTIC_PASSWORD
+              value: changeme
+            - name: cluster.name
+              value: sa-demo-spring-petclinic
+            - name: bootstrap.memory_lock
+              value: "true"
+            - name: xpack.monitoring.enabled
+              value: "true"
+            - name: xpack.ml.node_concurrent_job_allocations
+              value: "8"
+            - name: xpack.security.enabled
+              value: "true"
+            - name: http.host
+              value: "0.0.0.0"
+          ports:
+            - containerPort: 9200
+          volumeMounts:
+            - name: esdata01
+              mountPath: /usr/share/elasticsearch/data
+          resources:
+            limits:
+              memory: "4Gi"
+          securityContext:
+            capabilities:
+              add:
+                - IPC_LOCK
+      volumes:
+        - name: esdata01
+          persistentVolumeClaim:
+            claimName: esdata01
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-petclinic-kibana
+spec:
+  selector:
+    app: kibana
+  ports:
+    - protocol: TCP
+      port: 5601
+      targetPort: 5601
+      nodePort: 30001
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-petclinic-kibana
+spec:
+  selector:
+    matchLabels:
+      app: kibana
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:7.4.0
+          env:
+            - name: SERVER_HOST
+              value: "0.0.0.0"
+            - name: ELASTICSEARCH_HOSTS
+              value: "http://elasticsearch:9200"
+            - name: ELASTICSEARCH_USERNAME
+              value: elastic
+            - name: ELASTICSEARCH_PASSWORD
+              value: changeme
+            - name: XPACK_SECURITY_SECURECOOKIES
+              value: "false"
+            - name: XPACK_MONITORING_KIBANA_COLLECTION_ENABLED
+              value: "false"
+            - name: XPACK_MONITORING_ENABLED
+              value: "true"
+          ports:
+            - containerPort: 5601
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-petclinic-apm-server
+spec:
+  selector:
+    app: apm-server
+  ports:
+    - protocol: TCP
+      port: 8200
+      targetPort: 8200
+      nodePort: 30002
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-petclinic-apm-server
+spec:
+  selector:
+    matchLabels:
+      app: apm-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: apm-server
+    spec:
+      containers:
+        - name: apm-server
+          image: docker.elastic.co/apm/apm-server:7.4.0
+          ports:
+            - containerPort: 8200
+          command:
+            - apm-server
+            - -e
+            - -E
+            - apm-server.frontend.enabled=true
+            - -E
+            - apm-server.frontend.rate_limit=100000
+            - -E
+            - apm-server.host=0.0.0.0:8200
+            - -E
+            - apm-server.read_timeout=1m
+            - -E
+            - apm-server.shutdown_timeout=2m
+            - -E
+            - apm-server.write_timeout=1m
+            - -E
+            - apm-server.rum.enabled=true
+            - -E
+            - apm-server.kibana.host=kibana:5601
+            - -E
+            - apm-server.kibana.protocol=http
+            - -E
+            - apm-server.kibana.username=elastic
+            - -E
+            - apm-server.kibana.password=changeme
+            - -E
+            - monitoring.enabled=true
+            - -E
+            - output.elasticsearch.hosts=elasticsearch:9200
+            - -E
+            - output.elasticsearch.username=elastic
+            - -E
+            - output.elasticsearch.password=changeme
+            - -E
+            - setup.template.enabled=true
+            - -E
+            - setup.template.overwrite=true
+            - -E
+            - apm-server.frontend.enable=true
+            - -E
+            - apm-server.frontend.rate_limit=10000
+            - -E
+            - apm-server.read_timeout=1m
+            - -E
+            - apm-server.shutdown_timeout=2m
+            - -E
+            - apm-server.write_timeout=1m
+            - -E
+            - logging.metrics.enabled=true
+            - -E
+            - logging.metrics.enabled=true
+            - -E
+            - ilm.enabled=true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-petclinic-mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-petclinic-mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: spring-petclinic-mysql:7.4.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: petclinic
+            - name: MYSQL_DATABASE
+              value: petclinic
+            - name: AWS
+

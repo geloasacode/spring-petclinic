@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f ../docker-compose.yml
+    kompose.version: 1.32.0 (765fde254)
+  labels:
+    io.kompose.service: spring-petclinic-server
+  name: spring-petclinic-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: spring-petclinic-server
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f ../docker-compose.yml
+        kompose.version: 1.32.0 (765fde254)
+      labels:
+        io.kompose.network/spring-petclinic-spring-petclinic-net: "true"
+        io.kompose.service: spring-petclinic-server
+    spec:
+      containers:
+        - env:
+            - name: DATABASE_DIALECT
+              value: MYSQL
+            - name: DATABASE_DRIVER
+              value: com.mysql.jdbc.Driver
+            - name: DATABASE_PASSWORD
+              value: petclinic
+            - name: DATABASE_PLATFORM
+              value: org.hibernate.dialect.MySQLDialect
+            - name: DATABASE_URL
+              value: jdbc:mysql://mysql:3306/petclinic?useUnicode=true
+            - name: DATABASE_USERNAME
+              value: root
+            - name: DATASOURCE_DATA
+              value: classpath*:db/mysql/populateDB.sql
+            - name: DATASOURCE_SCHEMA
+              value: classpath*:db/mysql/initDB.sql
+            - name: ELASTIC_APM_CAPTURE_BODY
+              value: all
+            - name: ELASTIC_APM_SERVER_URL
+              value: http://apm-server:8200
+            - name: ELASTIC_APM_SERVICE_NAME
+              value: petclinic-spring
+            - name: ELASTIC_APM_SPAN_FRAMES_MIN_DURATION
+              value: "-1"
+            - name: INITIALIZE_DB
+              value: "true"
+            - name: JAVA_PROFILE
+              value: mysql,spring-data-jpa
+            - name: SERVER_PORT
+              value: "8000"
+          image: spring-petclinic-server:7.4.0
+          livenessProbe:
+            exec:
+              command:
+                - curl
+                - --write-out
+                - '''HTTP %{http_code}'''
+                - --silent
+                - --output
+                - /dev/null
+                - http://spring-petclinic-server:8000/
+            failureThreshold: 10
+            periodSeconds: 10
+          name: spring-petclinic-server
+          ports:
+            - containerPort: 8000
+              hostIP: 127.0.0.1
+              hostPort: 8000
+              protocol: TCP
+      restartPolicy: Always

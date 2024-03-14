@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f ../docker-compose.yml
+    kompose.version: 1.32.0 (765fde254)
+  labels:
+    io.kompose.service: spring-petclinic-client
+  name: spring-petclinic-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: spring-petclinic-client
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f ../docker-compose.yml
+        kompose.version: 1.32.0 (765fde254)
+      labels:
+        io.kompose.network/spring-petclinic-spring-petclinic-net: "true"
+        io.kompose.service: spring-petclinic-client
+    spec:
+      containers:
+        - env:
+            - name: ADDRESS_SERVER
+              value: http://spring-address-finder:5000
+            - name: API_SERVER
+              value: http://spring-petclinic-server:8000
+            - name: ELASTICSEARCH_PASSWORD
+              value: changeme
+            - name: ELASTICSEARCH_URL
+              value: http://elasticsearch:9200
+            - name: ELASTICSEARCH_USERNAME
+              value: elastic
+            - name: ELASTIC_APM_CLIENT_SERVICE_NAME
+              value: petclinic-react
+            - name: ELASTIC_APM_SERVER_JS_URL
+              value: http://localhost:8200
+            - name: ELASTIC_APM_SERVER_URL
+              value: http://apm-server:8200
+            - name: ELASTIC_APM_SERVICE_NAME
+              value: petclinic-client
+            - name: ELASTIC_APM_SERVICE_VERSION
+              value: 1.0.0
+            - name: NODE_ENV
+              value: production
+            - name: PETCLINIC_EXTERNAL_URL
+              value: http://localhost:3000
+            - name: PETCLINIC_INTERNAL_URL
+              value: http://spring-petclinic-client:3000
+            - name: SERVER_PORT
+              value: "3000"
+          image: spring-petclinic-client:7.4.0
+          livenessProbe:
+            exec:
+              command:
+                - curl
+                - --write-out
+                - '''HTTP %{http_code}'''
+                - --silent
+                - --output
+                - /dev/null
+                - http://spring-petclinic-client:3000/
+            failureThreshold: 10
+            periodSeconds: 10
+          name: spring-petclinic-client
+          ports:
+            - containerPort: 3000
+              hostIP: 127.0.0.1
+              hostPort: 3000
+              protocol: TCP
+      restartPolicy: Always

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f ../docker-compose.yml
+    kompose.version: 1.32.0 (765fde254)
+  labels:
+    io.kompose.service: mysql
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: mysql
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f ../docker-compose.yml
+        kompose.version: 1.32.0 (765fde254)
+      labels:
+        io.kompose.network/spring-petclinic-spring-petclinic-net: "true"
+        io.kompose.service: mysql
+    spec:
+      containers:
+        - env:
+            - name: AWS_ACCESS_KEY_ID
+            - name: AWS_DEFAULT_REGION
+              value: us-east-2
+            - name: AWS_SECRET_ACCESS_KEY
+            - name: MYSQL_DATABASE
+              value: petclinic
+            - name: MYSQL_ROOT_PASSWORD
+              value: petclinic
+          image: spring-petclinic-mysql:7.4.0
+          name: spring-petclinic-mysql
+          ports:
+            - containerPort: 3306
+              hostPort: 3306
+              protocol: TCP
+      restartPolicy: Always
